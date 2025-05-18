@@ -2,7 +2,7 @@
 const io = require('socket.io')(3000);
 const Deck = require('./models/deck');
 const { v4: uuidv4 } = require('uuid');
-const RealPlayer = require('./models/realPlayer');
+const RealPlayer = require('./models/player/realPlayer');
 const createSpecialMode = require('./modules/helper').createSpecialMode;
 const DEFAULT_COMPARATOR = process.env.DEFAULT_COMPARATOR || 'max';
 

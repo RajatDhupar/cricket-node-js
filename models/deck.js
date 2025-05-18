@@ -1,5 +1,5 @@
 const Card = require('./card');
-const cricketPlayers = require('../data/cricketPlayers');
+const cricketPlayers = require('../resources/seed');
 const Runs = require('./playableAttributes/run');
 const Matches = require('./playableAttributes/match');
 const Centuries = require('./playableAttributes/century');
