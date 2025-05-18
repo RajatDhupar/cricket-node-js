@@ -2,7 +2,6 @@ const FreeHitMode = require('../models/mode/freeHitMode');
 const SuperMode = require('../models/mode/superMode');
 const PowerPlayMode = require('../models/mode/powerPlayMode');
 const WorldCupMode = require('../models/mode/worldCupMode');
-const NormalMode = require('../models/mode/normalMode');
 
 function comparator(a,b,type = 'max') {
   if (a === b) return 0;
@@ -26,8 +25,6 @@ function createSpecialMode(modeName) {
       return new PowerPlayMode();
     case 'world_cup':
       return new WorldCupMode();
-    case 'normal':
-      return new NormalMode();
     default:
       throw new Error(`Unknown special mode: ${modeName}`);
   }

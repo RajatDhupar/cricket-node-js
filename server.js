@@ -181,9 +181,9 @@ io.on('connection', (socket) => {
 
     const [player1Id, player2Id] = games[gameId].players;
     const card1 = games[gameId].selectedCards[player1Id];
-    players[player1Id].cards = players[player1Id].cards.filter(c => c.playerName !== card1.playerName); // remove card1 from player's deck
+    players[player1Id].cards = players[player1Id].cards.filter(c => c.name !== card1.playerName); // remove card1 from player's deck
     const card2 = games[gameId].selectedCards[player2Id];
-    players[player2Id].cards = players[player2Id].cards.filter(c => c.playerName !== card2.playerName); // remove card2 from player's deck
+    players[player2Id].cards = players[player2Id].cards.filter(c => c.name !== card2.playerName); // remove card2 from player's deck
 
     if (!card1 || !card2) return;
 
