@@ -210,18 +210,15 @@ io.on('connection', (socket) => {
       const opponentDamage = activeModeP1 ? activeModeP1.getOpponentDamage() : 10;
       const lossHit = activeModeP2 ? activeModeP2.getLossHit() : 10;
       players[player2Id].loseHealth(opponentDamage>lossHit?opponentDamage:lossHit);
-      nextTurn = player1Id;
     } else if (comparison < 0) {
       winner = player2Id;
       games[gameId].score[player2Id] += 1;
       const opponentDamage = activeModeP2 ? activeModeP2.getOpponentDamage() : 10;
       const lossHit = activeModeP1 ? activeModeP1.getLossHit() : 10;
       players[player1Id].loseHealth(opponentDamage>lossHit?opponentDamage:lossHit);
-      nextTurn = player2Id;
-    } else {
-      nextTurn = games[gameId].turn; // draw
     }
 
+    nextTurn = games[gameId].players.find(p => p !== playerId);
     games[gameId].turn = nextTurn;
 
     setTimeout(() => {
