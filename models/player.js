@@ -15,6 +15,21 @@ class Player {
     this.cards = cards;
   }
 
+  getFlatHeirarchyCards() {
+    return this.cards.map(card => {
+      return {
+        playerName: card.name,
+        runs: card.attributes.get('runs').value,
+        matches: card.attributes.get('matches').value,
+        centuries: card.attributes.get('centuries').value,
+        halfCenturies: card.attributes.get('halfCenturies').value,
+        wickets: card.attributes.get('wickets').value,
+        catches: card.attributes.get('catches').value,
+        imageUrl: card.imageUrl
+      };
+    });
+  }
+
   setSpecialMode(mode) {
     this.specialMode = mode;
   }

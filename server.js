@@ -3,6 +3,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+// Dependencies
+// const io = require('socket.io')(3000);
+const Deck = require('./models/deck');
+const { v4: uuidv4 } = require('uuid');
+const RealPlayer = require('./models/player/realPlayer');
+const createSpecialMode = require('./modules/helper').createSpecialMode;
+const comparator = require('./modules/helper').comparator;
+const DEFAULT_COMPARATOR = process.env.DEFAULT_COMPARATOR || 'max';
 
 const app = express();
 app.use(cors());
@@ -15,305 +23,255 @@ const io = new Server(server, {
   }
 });
 
-const webSocket = require('./webSocket');
 
-// // Game state
-// const games = {};
-// const players = {};
-// // Card generation function
-// function generatePlayerCards() {
-//   const cricketers = [
-//     { playerName: "Virat Kohli", matches: 254, runs: 12000, centuries: 43, wickets: 4 , catches: 100, half_centuries: 70 },
-//     { playerName: "Rohit Sharma", matches: 227, runs: 9283, centuries: 29, wickets: 8 , catches: 120, half_centuries: 40 },
-//     { playerName: "Joe Root", matches: 232, runs: 10203, centuries: 26, wickets: 18 },
-//     { playerName: "Steve Smith", matches: 214, runs: 9662, centuries: 30, wickets: 17 },
-//     { playerName: "Kane Williamson", matches: 188, runs: 7659, centuries: 24, wickets: 7 },
-//     { playerName: "Ben Stokes", matches: 164, runs: 5703, centuries: 12, wickets: 187 },
-//     { playerName: "Jasprit Bumrah", matches: 156, runs: 245, centuries: 0, wickets: 290 },
-//     { playerName: "Pat Cummins", matches: 165, runs: 988, centuries: 0, wickets: 250 },
-//     { playerName: "R Ashwin", matches: 189, runs: 2685, centuries: 5, wickets: 442 },
-//     { playerName: "Shakib Al Hasan", matches: 213, runs: 6903, centuries: 13, wickets: 328 },
-//     { playerName: "MS Dhoni", matches: 350, runs: 10773, centuries: 16, wickets: 1 },
-//     { playerName: "Babar Azam", matches: 195, runs: 8786, centuries: 19, wickets: 0 }
-//   ];
-  
-//   // Randomly select 10 unique cards
-//   const shuffled = [...cricketers].sort(() => 0.5 - Math.random());
-//   const selectedCards = shuffled.slice(0, 10);
-  
-//   // Add unique IDs to cards
-//   return selectedCards.map((card, index) => ({
-//     id: `card-${index}`,
-//     ...card
-//   }));
-// }
 
-// // Generate a unique game ID
-// function generateUniqueGameId() {
-//   return Math.random().toString(36).substring(2, 9);
-// }
+// Game state
+const games = {};
+const players = {};
 
-// // Socket.IO logic
-// io.on('connection', (socket) => {
-//   console.log('User connected:', socket.id);
-  
-//   // Store player connection
-//   players[socket.id] = {
-//     id: socket.id,
-//     inGame: false
-//   };
-  
-//   // Create game
-//   socket.on('create_game', () => {
-//     const gameId = generateUniqueGameId();
-    
-//     games[gameId] = {
-//       id: gameId,
-//       players: [socket.id],
-//       turn: socket.id,
-//       cards: {},
-//       selectedCards: {},
-//       currentAttribute: null,
-//       score: { [socket.id]: 0 }
-//     };
-    
-//     // Set player in game
-//     players[socket.id].inGame = true;
-//     players[socket.id].gameId = gameId;
-    
-//     // Join game room
-//     socket.join(gameId);
-    
-//     // Send response to client
-//     socket.emit('game_created', {
-//       gameId: gameId,
-//       playerId: socket.id
-//     });
-    
-//     console.log(`Game created: ${gameId} by player ${socket.id}`);
-//   });
-  
-//   // Join game
-// socket.on('join_game', (data) => {
-//   const { gameId } = data;
-  
-//   // Check if game exists
-//   if (!games[gameId]) {
-//     socket.emit('error', { message: 'Game not found' });
-//     return;
-//   }
-  
-//   // Check if game is full
-//   if (games[gameId].players.length >= 2) {
-//     socket.emit('error', { message: 'Game is full' });
-//     return;
-//   }
-  
-//   // Add player to game
-//   games[gameId].players.push(socket.id);
-//   games[gameId].score[socket.id] = 0;
-  
-//   // Set player in game
-//   players[socket.id].inGame = true;
-//   players[socket.id].gameId = gameId;
-  
-//   // Generate cards for both players
-//   const player1Id = games[gameId].players[0];
-//   const player2Id = socket.id;
-  
-//   games[gameId].cards[player1Id] = generatePlayerCards();
-//   games[gameId].cards[player2Id] = generatePlayerCards();
-  
-//   // Set initial turn - important to give it to the first player
-//   games[gameId].turn = player1Id;
-  
-//   // Join game room
-//   socket.join(gameId);
-  
-//   // Notify both players with IDENTICAL turn information
-//   io.to(player1Id).emit('game_joined', {
-//     gameId: gameId,
-//     playerId: player1Id,
-//     opponentId: player2Id,
-//     cards: games[gameId].cards[player1Id],
-//     turn: games[gameId].turn  // Both players will receive the same turn ID
-//   });
-  
-//   socket.emit('game_joined', {
-//     gameId: gameId,
-//     playerId: player2Id,
-//     opponentId: player1Id,
-//     cards: games[gameId].cards[player2Id],
-//     turn: games[gameId].turn  // Both players will receive the same turn ID
-//   });
-  
-//   console.log(`Player ${socket.id} joined game ${gameId}, first turn: ${games[gameId].turn}`);
-// });
-  
-//   // In server.js, update the select_card handler
+// Generate a unique game ID
+function generateUniqueGameId() {
+  return uuidv4().split('-')[0];
+}
 
-// socket.on('select_card', (data) => {
-//   const { gameId, playerId, card } = data;
-  
-//   if (!games[gameId]) {
-//     console.log(`Game ${gameId} not found for card selection`);
-//     return;
-//   }
-  
-//   console.log(`Player ${playerId} selected card ${card.playerName} in game ${gameId}`);
-  
-//   // Store the selected card
-//   games[gameId].selectedCards[playerId] = card;
-  
-//   // Notify opponent that a card was selected (without revealing details)
-//   const opponentId = games[gameId].players.find(p => p !== playerId);
-  
-//   if (opponentId) {
-//     socket.to(opponentId).emit('opponent_selected_card', {
-//       card: { id: card.id, playerName: card.playerName }
-//     });
-//   }
-  
-//   // Check if both players have selected cards
-//   const allPlayersSelected = games[gameId].players.every(
-//     playerId => !!games[gameId].selectedCards[playerId]
-//   );
-  
-//   // If both players have selected cards, make sure turn is set to the player whose turn it is
-//   if (allPlayersSelected) {
-//     console.log(`Both players have selected cards in game ${gameId}`);
-    
-//     // Make sure the turn information is broadcast to all players
-//     io.to(gameId).emit('turn_update', {
-//       turn: games[gameId].turn
-//     });
-    
-//     console.log(`Turn updated: ${games[gameId].turn} in game ${gameId}`);
-//   }
-// });
-  
-//   // Handle attribute selection
-//   // In server.js, update the select_attribute handler
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
 
-// socket.on('select_attribute', (data) => {
-//   const { gameId, playerId, attribute } = data;
-  
-//   console.log(`Player ${playerId} selected attribute ${attribute} in game ${gameId}`);
-  
-//   if (!games[gameId]) {
-//     console.error(`Game ${gameId} not found for attribute selection`);
-//     return;
-//   }
-  
-//   games[gameId].currentAttribute = attribute;
-  
-//   // Get both selected cards
-//   const player1Id = games[gameId].players[0];
-//   const player2Id = games[gameId].players[1];
-  
-//   const card1 = games[gameId].selectedCards[player1Id];
-//   const card2 = games[gameId].selectedCards[player2Id];
-  
-//   if (!card1 || !card2) {
-//     console.error(`Missing cards for game ${gameId}`, { card1, card2 });
-//     return;
-//   }
-  
-//   // Notify both players about the selected attribute
-//   io.to(gameId).emit('attribute_selected', {
-//     attribute: attribute,
-//     playerId: playerId
-//   });
-  
-//   console.log(`Attribute selected: ${attribute} in game ${gameId}`);
-  
-//   // Determine winner
-//   let winningPlayerId = null;
-//   let nextTurn = null;
-  
-//   if (card1[attribute] > card2[attribute]) {
-//     winningPlayerId = player1Id;
-//     games[gameId].score[player1Id] = (games[gameId].score[player1Id] || 0) + 1;
-//     nextTurn = player1Id;
-//   } else if (card2[attribute] > card1[attribute]) {
-//     winningPlayerId = player2Id;
-//     games[gameId].score[player2Id] = (games[gameId].score[player2Id] || 0) + 1;
-//     nextTurn = player2Id;
-//   } else {
-//     // It's a draw
-//     winningPlayerId = null;
-//     nextTurn = games[gameId].turn; // Keep same turn on draw
-//   }
-  
-//   games[gameId].turn = nextTurn;
-  
-//   // Critical: Log the result calculation
-//   console.log(`Round result calculation:`, {
-//     attribute,
-//     card1Value: card1[attribute],
-//     card2Value: card2[attribute],
-//     winningPlayerId,
-//     player1Id,
-//     player2Id,
-//     nextTurn
-//   });
-  
-//   // Send result to both players (with short delay for dramatic effect)
-//   setTimeout(() => {
-//     // For player 1: win if they're the winner, lose if the other player is the winner, draw otherwise
-//     io.to(player1Id).emit('round_result', {
-//       result: winningPlayerId === player1Id ? 'win' : 
-//               winningPlayerId === player2Id ? 'lose' : 'draw',
-//       score: {
-//         player: games[gameId].score[player1Id] || 0,
-//         opponent: games[gameId].score[player2Id] || 0
-//       },
-//       nextTurn: games[gameId].turn,
-//       attribute: attribute
-//     });
+  // Create real player instance
+  players[socket.id] = new RealPlayer(socket.id);
+
+  // Create game
+  socket.on('create_game', () => {
+    const gameId = generateUniqueGameId();
+
+    games[gameId] = {
+      id: gameId,
+      players: [socket.id],
+      turn: socket.id,
+      cards: {},
+      selectedCards: {},
+      currentAttribute: null,
+      score: {},
+      health: {}
+    };
+
+    players[socket.id].inGame = true;
+    players[socket.id].gameId = gameId;
+
+    socket.join(gameId);
+
+    socket.emit('game_created', {
+      gameId: gameId,
+      playerId: socket.id
+    });
+
+    console.log(`Game created: ${gameId} by player ${socket.id}`);
+  });
+
+  // Player selects special mode
+  socket.on('select_special_mode', ({ gameId, modeName }) => {
+    if (!games[gameId]) return;
+    players[socket.id].setSpecialMode(createSpecialMode(modeName));
+    socket.emit('special_mode_selected', { mode: modeName });
+  });
+
+  // Activate special mode
+  socket.on('activate_special_mode', ({ gameId, playerId }) => {
+    if (!games[gameId] || !games[gameId].specialModes[playerId]) return;
+    const mode = games[gameId].specialModes[playerId];
+    if (mode && !mode.activated) {
+      // mode.activate();
+      players[playerId].updateSpecialModeCounter();
+      games[gameId].modeActivated[playerId] = true;
+      io.to(gameId).emit('special_mode_activated', { playerId, mode: mode.name });
+    }
+  });
+
+  // Join game
+  socket.on('join_game', (data) => {
+    const { gameId } = data;
+
+    if (!games[gameId]) {
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+
+    if (games[gameId].players.length >= 2) {
+      socket.emit('error', { message: 'Game is full' });
+      return;
+    }
+
+    games[gameId].players.push(socket.id);
+
+    players[socket.id].inGame = true;
+    players[socket.id].gameId = gameId;
+
+    const player1Id = games[gameId].players[0];
+    const player2Id = socket.id;
+
+    const deck = new Deck();
+    const cards1 = deck.dealCards(10);
+    const cards2 = deck.dealCards(10);
+
+    players[player1Id].assignCards(cards1);
+    players[player2Id].assignCards(cards2);
+
+    games[gameId].turn = player1Id;
+    games[gameId].score[player1Id] = 0;
+    games[gameId].score[player2Id] = 0;
+    games[gameId].health[player1Id] = 100;
+    games[gameId].health[player2Id] = 100;
+
+    socket.join(gameId);
+
+    io.to(player1Id).emit('game_joined', {
+      gameId: gameId,
+      playerId: player1Id,
+      opponentId: player2Id,
+      cards: players[player1Id].getFlatHeirarchyCards(),
+      turn: games[gameId].turn
+    });
+
+    socket.emit('game_joined', {
+      gameId: gameId,
+      playerId: player2Id,
+      opponentId: player1Id,
+      cards: players[player2Id].getFlatHeirarchyCards(),
+      turn: games[gameId].turn
+    });
+
+    console.log(`Player ${socket.id} joined game ${gameId}, first turn: ${games[gameId].turn}`);
+  });
+
+  // Card selection
+  socket.on('select_card', (data) => {
+    const { gameId, playerId, card } = data;
+    if (!games[gameId]) return;
+
+    console.log(`Player ${playerId} selected card ${card.name} in game ${gameId}`);
+
+    // Remove card from player's deck
+    players[playerId].cards = players[playerId].cards.filter(c => c.playerName !== card.playerName);
+    games[gameId].selectedCards[playerId] = card;
+    const opponentId = games[gameId].players.find(p => p !== playerId);
+
+    if (opponentId) {
+      socket.to(opponentId).emit('opponent_selected_card', {
+        card: { id: card.id, playerName: card.name }
+      });
+    }
+
+    const allSelected = games[gameId].players.every(
+      pId => !!games[gameId].selectedCards[pId]
+    );
+
+    if (allSelected) {
+      io.to(gameId).emit('turn_update', {
+        turn: games[gameId].turn
+      });
+    }
+  });
+
+  // Attribute selection
+  socket.on('select_attribute', (data) => {
+    const { gameId, playerId, attribute } = data;
+
+    if (!games[gameId]) return;
+    games[gameId].currentAttribute = attribute;
+
+    const [player1Id, player2Id] = games[gameId].players;
+    const card1 = games[gameId].selectedCards[player1Id];
+    const card2 = games[gameId].selectedCards[player2Id];
+
+    if (!card1 || !card2) return;
+
+    io.to(gameId).emit('attribute_selected', {
+      attribute,
+      playerId
+    });
+
+    let winner = null,activeModeP1 = null,activeModeP2 = null;
+    let nextTurn = null;
+
+    const attr1 = card1[attribute];
+    const attr2 = card2[attribute];
     
-//     // For player 2: win if they're the winner, lose if the other player is the winner, draw otherwise
-//     io.to(player2Id).emit('round_result', {
-//       result: winningPlayerId === player2Id ? 'win' : 
-//               winningPlayerId === player1Id ? 'lose' : 'draw',
-//       score: {
-//         player: games[gameId].score[player2Id] || 0,
-//         opponent: games[gameId].score[player1Id] || 0
-//       },
-//       nextTurn: games[gameId].turn,
-//       attribute: attribute
-//     });
+    if (!attr1 || !attr2) return;
     
-//     console.log(`Round results sent for game ${gameId}: winner is ${winningPlayerId || 'draw'}, next turn: ${nextTurn}`);
-//   }, 1000);
-// });
-  
-//   // Handle disconnection
-//   socket.on('disconnect', () => {
-//     console.log('User disconnected:', socket.id);
+    const comparison = comparator(attr1,attr2, DEFAULT_COMPARATOR);
+    // const activeModeP1 = games[gameId].modeActivated[player1Id] ? games[gameId].specialModes[player1Id] : null;
+    // const activeModeP2 = games[gameId].modeActivated[player2Id] ? games[gameId].specialModes[player2Id] : null;
     
-//     const player = players[socket.id];
-    
-//     if (player && player.inGame) {
-//       const gameId = player.gameId;
-      
-//       if (games[gameId]) {
-//         // Notify other player of disconnect
-//         const otherPlayerId = games[gameId].players.find(p => p !== socket.id);
-        
-//         if (otherPlayerId) {
-//           io.to(otherPlayerId).emit('opponent_disconnected');
-//         }
-        
-//         // Remove game
-//         delete games[gameId];
-//       }
-//     }
-    
-//     // Remove player
-//     delete players[socket.id];
-//   });
-// });
+    if (comparison > 0) {
+      winner = player1Id;
+      games[gameId].score[player1Id] += 1;
+      const opponentDamage = activeModeP1 ? activeModeP1.getOpponentDamage() : 10;
+      const lossHit = activeModeP2 ? activeModeP2.getLossHit() : 10;
+      players[player2Id].loseHealth(opponentDamage>lossHit?opponentDamage:lossHit);
+      nextTurn = player1Id;
+    } else if (comparison < 0) {
+      winner = player2Id;
+      games[gameId].score[player2Id] += 1;
+      const opponentDamage = activeModeP2 ? activeModeP2.getOpponentDamage() : 10;
+      const lossHit = activeModeP1 ? activeModeP1.getLossHit() : 10;
+      players[player1Id].loseHealth(opponentDamage>lossHit?opponentDamage:lossHit);
+      nextTurn = player2Id;
+    } else {
+      nextTurn = games[gameId].turn; // draw
+    }
+
+    games[gameId].turn = nextTurn;
+
+    setTimeout(() => {
+      io.to(player1Id).emit('round_result', {
+        result: winner === player1Id ? 'win' : winner === player2Id ? 'lose' : 'draw',
+        score: {
+          player: games[gameId].score[player1Id],
+          opponent: games[gameId].score[player2Id]
+        },
+        health: {
+          player: players[player1Id].health,
+          opponent: players[player2Id].health
+        },
+        nextTurn,
+        attribute
+      });
+
+      io.to(player2Id).emit('round_result', {
+        result: winner === player2Id ? 'win' : winner === player1Id ? 'lose' : 'draw',
+        score: {
+          player: games[gameId].score[player2Id],
+          opponent: games[gameId].score[player1Id]
+        },
+        health: {
+          player: players[player2Id].health,
+          opponent: players[player1Id].health
+        },
+        nextTurn,
+        attribute
+      });
+    }, 1000);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    const player = players[socket.id];
+    if (player?.inGame) {
+      const gameId = player.gameId;
+      const game = games[gameId];
+      if (game) {
+        const opponentId = game.players.find(p => p !== socket.id);
+        if (opponentId) {
+          io.to(opponentId).emit('opponent_disconnected');
+        }
+        delete games[gameId];
+      }
+    }
+    delete players[socket.id];
+  });
+});
+
 
 // Start server
 const PORT = process.env.PORT || 8080;
