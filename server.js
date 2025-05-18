@@ -181,7 +181,9 @@ io.on('connection', (socket) => {
 
     const [player1Id, player2Id] = games[gameId].players;
     const card1 = games[gameId].selectedCards[player1Id];
+    players[player1Id].cards = players[player1Id].cards.filter(c => c.playerName !== card1.playerName); // remove card1 from player's deck
     const card2 = games[gameId].selectedCards[player2Id];
+    players[player2Id].cards = players[player2Id].cards.filter(c => c.playerName !== card2.playerName); // remove card2 from player's deck
 
     if (!card1 || !card2) return;
 
@@ -233,6 +235,7 @@ io.on('connection', (socket) => {
           player: players[player1Id].health,
           opponent: players[player2Id].health
         },
+        cards: players[player1Id].getFlatHeirarchyCards(),
         nextTurn,
         attribute
       });
@@ -247,11 +250,19 @@ io.on('connection', (socket) => {
           player: players[player2Id].health,
           opponent: players[player1Id].health
         },
+        cards: players[player2Id].getFlatHeirarchyCards(),
         nextTurn,
         attribute
       });
     }, 1000);
   });
+
+  // socket.on('updated_cards', (data) => {
+  //   const { playerId } = data;
+  //   io.to(playerId).emit('updated_cards', {
+  //     cards: players[playerId].getFlatHeirarchyCards()
+  //   });
+  // });
 
   // Handle disconnect
   socket.on('disconnect', () => {
