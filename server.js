@@ -157,7 +157,7 @@ io.on('connection', (socket) => {
 
     if (opponentId) {
       socket.to(opponentId).emit('opponent_selected_card', {
-        card: { id: card.id, playerName: card.playerName }
+        card: card
       });
     }
 
