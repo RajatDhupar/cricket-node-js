@@ -31,6 +31,7 @@ class Player {
   }
 
   setSpecialMode(mode) {
+    console.log('duk3 setSpecialMode ...... ', mode);
     this.specialMode = mode;
   }
 

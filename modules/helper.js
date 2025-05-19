@@ -16,6 +16,7 @@ function comparator(a,b,type = 'max') {
 }
 
 function createSpecialMode(modeName) {
+  console.log('duk3 modeName .......', modeName);
   switch (modeName.toLowerCase()) {
     case 'free_hit':
       return new FreeHitMode();

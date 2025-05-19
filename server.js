@@ -68,22 +68,22 @@ io.on('connection', (socket) => {
     console.log(`Game created: ${gameId} by player ${socket.id}`);
   });
 
-  // Player selects special mode
-  socket.on('select_special_mode', ({ gameId, modeName }) => {
-    if (!games[gameId]) return;
-    players[socket.id].setSpecialMode(createSpecialMode(modeName));
-    socket.emit('special_mode_selected', { mode: modeName });
-  });
+  // // Player selects special mode
+  // socket.on('select_special_mode', ({ gameId, modeName }) => {
+  //   if (!games[gameId]) return;
+  //   players[socket.id].setSpecialMode(createSpecialMode(modeName));
+  //   socket.emit('special_mode_selected', { mode: modeName });
+  // });
 
   // Activate special mode
-  socket.on('activate_special_mode', ({ gameId, playerId }) => {
-    if (!games[gameId] || !games[gameId].specialModes[playerId]) return;
-    const mode = games[gameId].specialModes[playerId];
+  socket.on('activate_special_mode', ({ gameId, playerId, modeId }) => {
+    players[playerId].setSpecialMode(createSpecialMode(modeId));
+    console.log('duk3 selected mode ...... ', players[playerId].specialMode);
+    if (!games[gameId] || !players[playerId].specialMode) return;
+    const mode = players[playerId].specialMode;
     if (mode && !mode.activated) {
       // mode.activate();
       players[playerId].updateSpecialModeCounter();
-      games[gameId].modeActivated[playerId] = true;
-      io.to(gameId).emit('special_mode_activated', { playerId, mode: mode.name });
     }
   });
 
@@ -174,36 +174,39 @@ io.on('connection', (socket) => {
 
   // Attribute selection
   socket.on('select_attribute', (data) => {
-    const { gameId, playerId, attribute } = data;
+    const { gameId, playerId, attribute, secondAttribute } = data;
 
     if (!games[gameId]) return;
     games[gameId].currentAttribute = attribute;
 
     const [player1Id, player2Id] = games[gameId].players;
     const card1 = games[gameId].selectedCards[player1Id];
-    // players[player1Id].cards = players[player1Id].cards.filter(c => c.name !== card1.playerName); // remove card1 from player's deck
     const card2 = games[gameId].selectedCards[player2Id];
-    // players[player2Id].cards = players[player2Id].cards.filter(c => c.name !== card2.playerName); // remove card2 from player's deck
+
+    console.log( 'duk3 card1', card1);
+    console.log( 'duk3 card2', card2);
+    console.log('duk3 attribue', attribute)
+    console.log('duk3 secondAttribute', secondAttribute);
 
     if (!card1 || !card2) return;
 
     io.to(gameId).emit('attribute_selected', {
       attribute,
+      secondAttribute,
       playerId
     });
 
-    let winner = null,activeModeP1 = null,activeModeP2 = null;
+    let winner = null;
     let nextTurn = null;
+    const comp1 = comparator(card1[attribute],card2[attribute], DEFAULT_COMPARATOR);
+    const comp2 = secondAttribute ? comparator(card1[secondAttribute],card2[secondAttribute], DEFAULT_COMPARATOR) : -2;
+    const comparison = Math.max(comp1, comp2);
+    console.log('duk3 comparison ......', comparison);
+    const activeModeP1 = players[player1Id].specialMode ? players[player1Id].specialMode : null;
+    const activeModeP2 = players[player2Id].specialMode ? players[player2Id].specialMode : null;
+    console.log('duk3 activeModeP1 ......', activeModeP1);
+    console.log('duk3 activeModeP2 ......', activeModeP2);
 
-    const attr1 = card1[attribute];
-    const attr2 = card2[attribute];
-    
-    if (!attr1 || !attr2) return;
-    
-    const comparison = comparator(attr1,attr2, DEFAULT_COMPARATOR);
-    // const activeModeP1 = games[gameId].modeActivated[player1Id] ? games[gameId].specialModes[player1Id] : null;
-    // const activeModeP2 = games[gameId].modeActivated[player2Id] ? games[gameId].specialModes[player2Id] : null;
-    
     if (comparison > 0) {
       winner = player1Id;
       games[gameId].score[player1Id] += 1;
